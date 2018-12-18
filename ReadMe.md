@@ -3,29 +3,17 @@
 ## Create the Project
 
 - Create a New MVC (Choose MVC, not Empty) Project named `FinalExam`
-- Add the Entity Framework package to the project thru Manage NuGet Packages
+- Add the Entity Framework package to the project through Manage NuGet Packages
 
-## Create the Database in SQL Server
+## Create the Database in SQL Server and connect it to Visual Studios
 
-- Copy the provided script in a new query and run
-- Make sure the right ID's are assigned and edited
-	- Click table and choose design
-	- Double click on `Identity Specification` and choose seed/increment and make it a key if needs be
-	- Check for any other database requirements that Anderson has stated in prompt
-- Copy connection string from SQL Server Object explorer
-- Add the connection string to the RIGHT Web.config file
-
-```xml
-<connectionStrings>
-    <add name="DatabaseNameContext" connectionString="PASTE HERE"
-      providerName="System.Data.SqlClient" />
-  </connectionStrings>
-```
+- Copy the provided script in a new query and run, this will make all of the tables
+- Double check to see if there are keys in the database. If no data needs to be entered manually, click on the database diagrams and design a new diagram. This will create an ERD which will be the easiest to use when writing the models. 
 - Now create the database model by right clicking the Models folder and choosing Add | Class
 - Name it the table name
 	- Remember that columns named ID or with ID at the end of the name will be primary keys
 	- You can add the attribute `[DatabaseGenerated(DatabaseGeneratedOption.None)]` to turn off the system trying to maintain int primary keys
-	- Add the [Table] and [Key] annotations (along with other annotations)
+	- Add the [Table("Table Name")], [Key], [Display(Name = "New Name")], and virtual annotations (along with other annotations)
 
 
 ```c#
@@ -41,22 +29,6 @@ namespace BlowOut.Models
         [Required(ErrorMessage = "A First Name is required")]
         [Display(Name ="First Name")]
         public string firstName { get; set; }
-
-        [Required(ErrorMessage = "A Last Name is required")]
-        [Display(Name = "Last Name")]
-        public string lastName { get; set; }
-
-        [Required(ErrorMessage = "An Address is required")]
-        [Display(Name = "Address")]
-        public string clientAddress { get; set; }
-
-        [Required(ErrorMessage = "A City is required")]
-        [Display(Name = "City")]
-        public string clientCity { get; set; }
-
-        [Required(ErrorMessage = "A State is required")]
-        [Display(Name = "State")]
-        public string clientState { get; set; }
 
         [Required(ErrorMessage = "A Zip Code is required")]
         [Display(Name = "Zip Code")]
@@ -76,31 +48,52 @@ namespace BlowOut.Models
     }
 }
 ```
-Or for the virtual table to be linked, use this:
-
+Or for the annotation is a virtual key, use this: 
 ```c#
-namespace BlowOut.Models
-{
-    [Table("Instrument")]
-    public class Instrument
-    {
-        [Key]
-        public int instrumentID { get; set; }
-
-        [Display(Name = "Description")]
-        public string instruDescription { get; set; }
-
-        [Display(Name = "Price")]
-        public string instruPrice { get; set; }
-
-        [Display(Name = "Type")]
-        public string instruType { get; set; }
-	
-	[ForeignKey("Client")]
         public virtual int? clientID { get; set; }
         public virtual Client Client { get; set; }
+```
+
+After the models are all created to represent exactly what appears in the ERD, Create the DAL folder, which is where the connection to the database will be built. 
+- Add a new class to this folder called This should be named something like DatabaseNameContext.cs
+- NOTE: This is the name of your dbContext variable and string in the connection string (web.config)
+
+```c#
+namespace FantasyBasketball.DAL
+{
+    public class DatabaseNameContext : DbContext
+    //:DbContext needs to be added to the code to
+    {
+        public DatabaseNameContext() : base("DatabaseNameContext"){} 
+	//all of the created models go here in a DbSet which will allow visual studios to recognize the tables
+	
+        public DbSet<Team> Teams { get; set; }  
+        public DbSet<Player> Players { get; set; }
+        public DbSet<Position> Positions { get; set; }
     }
 }
+```
+Now we will add the connection string to the Web.config file so that visual studios can connect to the database in SSMS
+- Use the "System Explorer?" to navigate to the newly created database
+- Right click the database and click porperties Copy connection string from SQL Server Object explorer
+- Add the connection string to the Web.config file (the one at the bottom of the file structures" 
+
+```xml
+<connectionStrings>
+    <add name="DatabaseNameContext" connectionString="PASTE HERE"
+      providerName="System.Data.SqlClient" />
+  </connectionStrings>
+```
+
+-While we're here we will also add the code so that we can authorize logins 
+```xml
+<system.web>
+  <compilation debug="true" targetFramework="4.6.1" />
+  <httpRuntime targetFramework="4.6.1" 
+  <authentication mode="Forms">
+    <forms loginUrl="~/Home/Login" timeout="2880" />
+  </authentication>
+</system.web>
 ```
 
 - Modify Global.asax file to include using for models and the folder that will contain the context class (It's the Database.Set)
@@ -111,7 +104,7 @@ namespace BlowOut
     {
         protected void Application_Start()
         {
-            Database.SetInitializer<InstrumentRentalContext>(null);
+            Database.SetInitializer<DatabaseNameContext>(null);
 
             AreaRegistration.RegisterAllAreas();
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
@@ -121,27 +114,11 @@ namespace BlowOut
     }
 }
 ```
-- Add a new folder to the project called DAL
-- Add a new class to this folder called NBAContext.cs
-- NOTE: This is the name of your dbContext variable and string in the connection string (web.config)
 
-```c#
-namespace FantasyBasketball.DAL
-{
-    public class NBAContext : DbContext
-    {
-        public NBAContext() : base("NBAContext")
-        {
-
-        }
-
-        public DbSet<Team> Teams { get; set; }
-        public DbSet<Player> Players { get; set; }
-        public DbSet<Position> Positions { get; set; }
-    }
-}
-```
 - BUILD THE PROJECT
+- BUILD THE PROJECT
+- BUILD THE PROJECT
+
 - Now go add scaffolded controllers making sure that generate views is selected and adding the model and the context to the scaffolding
 	- You can do this by right mouse clicking on the controller folder and choosing New Scaffolded Item.
 	- Choose MVC 5 Controller with views, using EntityFramework. Click Add
@@ -152,6 +129,7 @@ namespace FantasyBasketball.DAL
 ## Helpful Code
 
 ### To create a login method
+- Go to your home controller and add these two methods 
 - Be weary of SQL Statement syntax!!!
 ```c#
 // GET: Home
@@ -183,37 +161,11 @@ public ActionResult Login(FormCollection form, bool rememberMe = false)
     }
 }
 ```
+- After pasting this code, right click the login method to create the view. 
 
 ### The form for the Login view
 ```c#
-@model BlowOut.Models.Instrument
-@{
-    ViewBag.Title = "Login";
-}
 
-<h2>User Login</h2>
-
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>RsvpForm</title>
-    <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
-    <script src="~/Scripts/jquery-2.1.4.min.js"></script>
-    <script src="~/Scripts/bootstrap.min.js"></script>
-</head>
-<body>
-    <div class="jumbotron">
-        <div class="container">
-            @using (Html.BeginForm("Login", "Home", FormMethod.Post))
-            {
-                <label for="inputEmail">Email address</label>
-                @Html.TextBox("Email address")
-                <label for="inputPassword">Password</label>
-                @Html.Password("Password")
-                <button type="submit">Login</button>  
-            }
-        </div>
-    </div>
-</body>
 ```
 
 ### Part of the shared layout for navbar
